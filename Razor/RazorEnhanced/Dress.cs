@@ -424,8 +424,8 @@ namespace RazorEnhanced
                         {
                             var existingItem = Assistant.World.Player.GetItemOnLayer(item.Layer);
                             if (existingItem == null || item.Serial != existingItem.Serial)
-                            {
-                                itemserial.Add((uint)item.Serial);
+                            {								
+								itemserial.Add((uint)item.Serial);
                             }
                         }
                         if (itemserial.Count > 0)
@@ -450,26 +450,35 @@ namespace RazorEnhanced
                         foreach (DressItemNew item in items)
                         {
                             var existingItem = Assistant.World.Player.GetItemOnLayer(item.Layer);
-                            if (existingItem == null || item.Serial != existingItem.Serial)
-                            {
-                                itemserial.Add((uint)item.Serial);
-                            }
-                            if (item.Layer == Layer.LeftHand)
-                            {
-                                if (lefth == null || item.Serial != lefth.Serial)
-                                {
-                                    twoHandLeft = Assistant.World.FindItem(item.Serial).IsTwoHanded;
-                                }
-                            }
+							var newItem = Assistant.World.FindItem(item.Serial);
+							if (newItem != null)
+							{
+								if (existingItem == null || item.Serial != existingItem.Serial)
+								{
+									itemserial.Add((uint)item.Serial);
+								}
+								if (item.Layer == Layer.LeftHand)
+								{
+									if (lefth == null || item.Serial != lefth.Serial)
+									{
+										twoHandLeft = Assistant.World.FindItem(item.Serial).IsTwoHanded;
+									}
+								}
 
-                            if (item.Layer == Layer.LeftHand && lefth != null && item.Serial != lefth.Serial)
+								if (item.Layer == Layer.LeftHand && lefth != null && item.Serial != lefth.Serial)
+								{
+									dropWeaponL = true;
+								}
+								if (item.Layer == Layer.RightHand && righth != null && item.Serial != righth.Serial)
+								{
+									dropWeaponR = true;
+								}
+							}
+							else
                             {
-                                dropWeaponL = true;
-                            }
-                            if (item.Layer == Layer.RightHand && righth != null && item.Serial != righth.Serial)
-                            {
-                                dropWeaponR = true;
-                            }
+								RazorEnhanced.Dress.AddLog(item.Name + " could not be found.");
+								RazorEnhanced.Misc.SendMessage(item.Name + " could not be found.", 945, true);
+							}
                         }
 
                         List<ushort> dropLayer = new List<ushort>();
@@ -490,7 +499,7 @@ namespace RazorEnhanced
                         if (itemserial.Count > 0)
                         {
                             RazorEnhanced.Dress.AddLog("Dressing...");
-                            Assistant.Client.Instance.SendToServerWait(new EquipItemMacro(itemserial));
+							Assistant.Client.Instance.SendToServerWait(new EquipItemMacro(itemserial));
                         }
                     }
 				}
@@ -591,7 +600,11 @@ namespace RazorEnhanced
 							{
 								Assistant.Item itemtomove = Assistant.World.Player.GetItemOnLayer(item.Layer);
 								if (itemtomove != null)
+								{
+									RazorEnhanced.Dress.AddLog(item.Layer.ToString() + " is already equipped.");
+									Misc.SendMessage(item.Layer.ToString() + " is already equipped.", false);
 									continue;
+								}
 
 								RazorEnhanced.Dress.AddLog("Item 0x" + item.Serial.ToString("X8") + " Equipped on layer: " + item.Layer.ToString());
 								RazorEnhanced.Player.EquipItem(item.Serial);
