@@ -401,9 +401,6 @@ namespace Assistant
                 PacketHandlers.Party.Clear();
 
                 Engine.MainWindow.UpdateTitle();
-                // Felix Fix
-                //foreach (WndRegEnt t in m_WndReg)
-                //	DLLImport.Win.PostMessage((IntPtr)((WndRegEnt)t).Handle, (uint)Assistant.UOAssist.UOAMessage.LOGOUT, IntPtr.Zero, IntPtr.Zero);
                 m_ConnectionStart = DateTime.MinValue;
             }
 
@@ -1158,5 +1155,12 @@ namespace Assistant
             DLLImport.Win.PostMessage(Assistant.Client.Instance.GetWindowHandle(), WM_CUSTOMTITLE, IntPtr.Zero, IntPtr.Zero);
         }
 
+        public override List<string> ValidFileLocations()
+        {
+            List<string> validFileLocations = new List<string>();
+            validFileLocations.Add(Assistant.Engine.RootPath);
+
+            return validFileLocations;
+        }
     }
 }

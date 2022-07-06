@@ -107,10 +107,11 @@ namespace RazorEnhanced
 					if (ext.Equals(".cs", StringComparison.InvariantCultureIgnoreCase))
                     {
 						CSharpEngine csharpEngine = CSharpEngine.Instance;
-                        bool compileErrors = csharpEngine.CompileFromFile(fullpath, true, out StringBuilder compileMessages, out Assembly assembly);
-						if (compileMessages.Length > 0)
-                        {
-							Misc.SendMessage(compileMessages.ToString());
+                        bool compileErrors = csharpEngine.CompileFromFile(fullpath, true, out List<string> compileMessages, out Assembly assembly);
+						
+						foreach (string str in compileMessages)
+						{
+							Misc.SendMessage(str);
 						}
 						if (compileErrors == true)
                         {
@@ -199,6 +200,12 @@ namespace RazorEnhanced
                         log.Clear();
                     }
                 }
+				finally
+                {
+					//
+
+					//
+				}
 			}
 
             internal void ReadText(string fullpath)
@@ -235,7 +242,8 @@ namespace RazorEnhanced
 				string result = String.Empty;
 				try
 				{
-					m_pe = new PythonEngine();
+					Action<string> action = (aString) => { Misc.SendMessage(aString.Trim('\r', '\n'), 55, false); };
+					m_pe = new PythonEngine(action);
                     
                     var pc = Microsoft.Scripting.Hosting.Providers.HostingHelpers.GetLanguageContext(m_pe.Engine) as PythonContext;
                     var temp = pc.SystemState.Get__dict__()["path_hooks"];

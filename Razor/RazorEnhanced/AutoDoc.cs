@@ -872,6 +872,7 @@ namespace RazorEnhanced
                 typeof(Statics),
                 typeof(Statics.TileInfo),
                 typeof(Sound),
+                typeof(CUO),
 
                 // API Agents
                 typeof(AutoLoot),
@@ -895,8 +896,7 @@ namespace RazorEnhanced
                 // Other classes
                 typeof(Point2D),
                 typeof(Point3D),
-                typeof(Property),
-                typeof(HotKeyEvent)               
+                typeof(Property),              
             };
 
 
