@@ -24,8 +24,53 @@ namespace RazorEnhanced
         public CompiledCode Compiled { get; set; }
         public PythonCompilerOptions CompilerOptions { get; set; }
 
-        public PythonEngine() {
-            Engine = Python.CreateEngine();
+        public class PythonWriter : MemoryStream
+        {
+            internal Action<string> m_action;
+
+            public PythonWriter(Action<string> stdoutWriter)
+                : base()
+            {
+                m_action = stdoutWriter;
+            }
+
+            public override void Write(byte[] buffer, int offset, int count)
+            {
+                if (m_action != null)
+                    m_action(System.Text.Encoding.ASCII.GetString(buffer));
+                base.Write(buffer, offset, count);
+            }
+
+            public override Task WriteAsync(byte[] buffer, int offset, int count, System.Threading.CancellationToken cancellationToken)
+            {
+                if (m_action != null)
+                    m_action(System.Text.Encoding.ASCII.GetString(buffer));
+                return base.WriteAsync(buffer, offset, count, cancellationToken);
+            }
+
+            public override void WriteByte(byte value)
+            {
+                if (m_action != null)
+                    m_action(value.ToString());
+                base.WriteByte(value);
+            }
+
+            public override IAsyncResult BeginWrite(byte[] buffer, int offset, int count, AsyncCallback callback, object state)
+            {
+                return base.BeginWrite(buffer, offset, count, callback, state);
+            }
+        }
+
+        public PythonEngine(Action<string> stdoutWriter) {
+            var runtime = IronPython.Hosting.Python.CreateRuntime();
+            if (stdoutWriter != null)
+            {
+                PythonWriter outputWriter = new PythonWriter(stdoutWriter);
+                runtime.IO.SetErrorOutput(outputWriter, Encoding.ASCII);
+                runtime.IO.SetOutput(outputWriter, Encoding.ASCII);
+            }
+            Engine = IronPython.Hosting.Python.GetEngine(runtime);
+
 
 
             //Paths for IronPython 3.4
@@ -65,6 +110,7 @@ namespace RazorEnhanced
             Modules.Add("Target", new RazorEnhanced.Target());
             Modules.Add("Statics", new RazorEnhanced.Statics());
             Modules.Add("Sound", new RazorEnhanced.Sound());
+            Modules.Add("CUO", new RazorEnhanced.CUO());
             Modules.Add("AutoLoot", new RazorEnhanced.AutoLoot());
             Modules.Add("Scavenger", new RazorEnhanced.Scavenger());
             Modules.Add("SellAgent", new RazorEnhanced.SellAgent());

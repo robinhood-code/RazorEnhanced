@@ -10,6 +10,7 @@ using System.Drawing;
 using static RazorEnhanced.HotKey;
 using System.Windows.Forms;
 using System.IO;
+using System.Reflection;
 
 namespace RazorEnhanced
 {
@@ -55,6 +56,191 @@ namespace RazorEnhanced
             }
             RazorEnhanced.UoWarper.UODLLHandleClass.CloseBackpack();
         }
+        /// <summary>
+        /// @nodoc
+        /// </summary>
+        public static void TestMap()
+        {
+            if (!Client.IsOSI)
+            {
+                // WorldMapGump worldMap = UIManager.GetGump<WorldMapGump>();
+                var getAllGumps = ClassicUOClient.CUOAssembly?.GetType("ClassicUO.Game.Managers.UIManager")?.GetProperty("Gumps", BindingFlags.Public | BindingFlags.Static);
+                if (getAllGumps != null)
+                {
+                    var listOfGumps = getAllGumps.GetValue(null);
+                    if (listOfGumps != null)
+                    {
+                        IEnumerable<Object> temp = listOfGumps as IEnumerable<Object>;
+                        foreach (var gump in temp)
+                        {
+                            if (gump != null)
+                            {
+                                var GumpType = ClassicUOClient.CUOAssembly?.GetType("ClassicUO.Game.UI.Gumps.Gump")?.GetProperty("GumpType", BindingFlags.Public | BindingFlags.Instance);
+                                if (GumpType != null)
+                                {
+                                    int GumpTypeEnum = (int)GumpType.GetValue(gump);
+                                    if (GumpTypeEnum == 18)
+                                    {
+                                        var WorldMapGump = ClassicUOClient.CUOAssembly?.GetType("ClassicUO.Game.UI.Gumps.WorldMapGump");
+                                        if (WorldMapGump != null)
+                                        {
+                                            var LoadMarkers = WorldMapGump?.GetMethod("LoadMarkers", BindingFlags.Instance | BindingFlags.NonPublic);
+                                            if (LoadMarkers != null)
+                                            {
+                                                LoadMarkers.Invoke(gump, null);
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        //PropertyInfo ProfileClass = ClassicUOClient.CUOAssembly?.GetType("ClassicUO.Configuration.Profile")?.GetProperty("AutoOpenDoors", BindingFlags.Public | BindingFlags.Instance);
+                        //if (ProfileClass != null)
+                        //{
+                        //    ProfileClass.SetValue(profile, true, null);
+                        //}
+                    }
+                }
+            }
+        }
+
+        internal static bool isSubDirectoryOf(string candidate, string other)
+        {
+            var isChild = false;
+            try
+            {
+                var candidateInfo = new DirectoryInfo(candidate.ToLower());
+                var otherInfo = new DirectoryInfo(other.ToLower());
+
+                while (candidateInfo.Parent != null)
+                {
+                    if (candidateInfo.Parent.FullName == otherInfo.FullName)
+                    {
+                        isChild = true;
+                        break;
+                    }
+                    else candidateInfo = candidateInfo.Parent;
+                }
+            }
+            catch (Exception error)
+            {
+                //var message = String.Format("Unable to check directories {0} and {1}: {2}", candidate, other, error);
+                //Trace.WriteLine(message);
+            }
+
+            return isChild;
+        }
+        internal static bool validateFilename(string fileName)
+        {
+            string dirName = Path.GetDirectoryName(fileName).ToLower();
+            string suffix = Path.GetExtension(fileName).ToLower();
+            switch (suffix)
+            {
+                case ".data":
+                case ".xml":
+                case ".map":
+                case ".csv":
+                    break;
+                default:
+                    return false;
+            }
+            List<string> validPaths = Assistant.Client.Instance.ValidFileLocations();
+            foreach (string path in validPaths)
+            {
+                if (isSubDirectoryOf(dirName, path))
+                    return true;
+            }
+            
+            return false;
+        }
+        /// <summary>
+        /// Allows creation and append of a file within RE ValidLocations.
+        /// For OSI/RE this is only the RE directory / sub-directories
+        /// For CUO/RE this is only CUO or RE directory / sub-directories
+        /// The filename MUST end in a limited file suffix list
+        /// </summary>
+        public static bool AppendToFile(string fileName, string lineOfData)
+        {
+            if (validateFilename(fileName))
+            {
+                TextWriter writer = new StreamWriter(fileName, true);
+                writer.WriteLine(lineOfData);
+                writer.Close();
+                return true;
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// Allows creation and append of a file within RE ValidLocations.
+        /// For OSI/RE this is only the RE directory / sub-directories
+        /// For CUO/RE this is only CUO or RE directory / sub-directories
+        /// The filename MUST end in a limited file suffix list
+        /// Checks to see if an identical line is already in the file, and does not add if it exists
+        /// </summary>
+        public static bool AppendNotDupToFile(string fileName, string lineOfData)
+        {
+            if (validateFilename(fileName))
+            {
+                if (File.Exists(fileName))
+                {
+                    List<string> lines = System.IO.File.ReadLines(fileName).ToList();
+                    if (lines.Contains(lineOfData))
+                        return true;
+                }
+                TextWriter writer = new StreamWriter(fileName, true);
+                writer.WriteLine(lineOfData);
+                writer.Close();
+                return true;
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// Allows removal of a line in a file within RE ValidLocations.
+        /// For OSI/RE this is only the RE directory / sub-directories
+        /// For CUO/RE this is only CUO or RE directory / sub-directories
+        /// The filename MUST end in a limited file suffix list
+        /// Checks to see if an identical line is in the file, and if it exists, it is removed and file written
+        /// </summary>
+        public static bool RemoveLineInFile(string fileName, string lineOfData)
+        {
+            if (validateFilename(fileName))
+            {
+                if (File.Exists(fileName))
+                {
+                    List<string> lines = System.IO.File.ReadLines(fileName).ToList();
+                    if (lines.Contains(lineOfData))
+                    {
+                        lines.RemoveAll(item => item == lineOfData);
+                        System.IO.File.WriteAllLines(fileName, lines);
+                    }
+                }
+                return true;
+            }
+            return false;
+        }
+
+
+        /// <summary>
+        /// Allows deletion of a file within RE ValidLocations.
+        /// For OSI/RE this is only the RE directory / sub-directories
+        /// For CUO/RE this is only CUO or RE directory / sub-directories
+        /// The filename MUST end in a limited file suffix list
+        /// </summary>
+        public static bool DeleteFile(string fileName)
+        {
+            if (validateFilename(fileName))
+            {
+                if (File.Exists(fileName))
+                {
+                    File.Delete(fileName);
+                }
+                return true;
+            }
+            return false;
+        }
+
 
         /// <summary>
         /// Open the backpack. 
@@ -120,6 +306,30 @@ namespace RazorEnhanced
             return p;
         }
 
+        // IsItem 
+        /// <summary>
+        /// Determine if the serial is an item
+        /// </summary>
+        /// <param name="serial"> Serial number of object to test is Item</param>
+        /// <returns>Return True - is an Item False - is not an item</returns>
+        public static bool IsItem(System.UInt32  serial)
+        {
+            Assistant.Serial anObject = new Assistant.Serial(serial);
+            return anObject.IsItem;
+        }
+
+        // IsMobile
+        /// <summary>
+        /// Determine if the serial is a mobile
+        /// </summary>
+        /// <param name="serial"> Serial number of object to test is Mobile</param>
+        /// <returns>Return True - is a mobile False - is not a mobile</returns>
+        public static bool IsMobile(System.UInt32 serial)
+        {
+            Assistant.Serial anObject = new Assistant.Serial(serial);
+            return anObject.IsMobile;
+        }
+
         //Change Profile
         /// <summary>
         /// Allow the scripted loading of a profile
@@ -149,7 +359,7 @@ namespace RazorEnhanced
         }
 
         /// <summary>
-        /// Compute the distance between 2 Point3D using pitagora's.
+        /// Compute the distance between 2 Point3D using pythagorian.
         /// </summary>
         /// <param name="point_a">First coordinates.</param>
         /// <param name="point_b">Second coordinates.</param>
@@ -160,6 +370,18 @@ namespace RazorEnhanced
             return distance;
         }
 
+        /// <summary>
+        /// Returns the UO distance between the 2 sets of co-ordinates.
+        /// </summary>
+        /// <param name="X1">X co-ordinate of first place.</param>
+        /// <param name="Y1">Y co-ordinate of first place.</param>
+        /// <param name="X2">X co-ordinate of second place.</param>
+        /// <param name="Y2">Y co-ordinate of second place.</param>
+        public static int Distance(int X1, int Y1, int X2, int Y2)
+        {
+            return Utility.Distance(X1, Y1, X2, Y2);
+        }
+        
         /// <summary>
         /// Send to the client a list of keystrokes. Can contain control characters: 
         /// - Send Control+Key: ctrl+u: ^u
